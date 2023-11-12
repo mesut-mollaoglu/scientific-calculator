@@ -8,7 +8,6 @@
 #include "Calculator.h"
 
 std::stack<Calculator::Type> Calculator::operatorStack;
-int Calculator::highestDegree;
 
 class Graphics {
 public:

@@ -34,6 +34,7 @@ public:
 		Deriv,
 		Expr,
 		Log,
+		Neg,
 		Undefined
 	};
 	struct Token {
@@ -51,16 +52,29 @@ public:
 			if (isdigit(infix.at(i)) || infix.at(i) == '.') {
 				buffer.push_back(infix.at(i));
 			}
-			else if (infix.at(i) == 'x') {
+			else if (!GetConstant(infix, i).empty()) {
+				std::string constant = GetConstant(infix, i);
+				double value = GetConstantValue(constant, variable);
 				if (!buffer.empty()) {
 					output.push_back(Token{ Type::Number, buffer });
 					buffer.clear();
+					int precedence = operatorStack.empty() ? -1 : GetPrecedence(operatorStack.top());
+					while (precedence >= GetPrecedence(Type::Asterisk)) {
+						output.push_back(Token{ operatorStack.top() });
+						operatorStack.pop();
+						precedence = operatorStack.empty() ? -1 : GetPrecedence(operatorStack.top());
+					}
+					operatorStack.push(Type::Asterisk);
+					output.push_back(Token{ Type::Number, std::to_string(value) });
 				}
-				output.push_back(Token{Type::Number, std::to_string(variable)});
+				else {
+					output.push_back(Token{ Type::Number, std::to_string(value) });
+				}
+				i += constant.size() - 1;
 			}
 			else if (infix.at(i) == ',') {
 				if (!buffer.empty()) {
-					output.push_back(Token{Type::Number, buffer });
+					output.push_back(Token{ Type::Number, buffer });
 					buffer.clear();
 				}
 				while (operatorStack.top() != Type::Open) {
@@ -97,11 +111,12 @@ public:
 					output.push_back(Token{ Type::Number, buffer });
 					buffer.clear();
 				}
-				int precedence = operatorStack.empty() ? 0 : GetPrecedence(operatorStack.top());
-				if (precedence > GetPrecedence(GetOperator(infix.at(i))) ||
+				int precedence = operatorStack.empty() ? -1 : GetPrecedence(operatorStack.top());
+				while (precedence > GetPrecedence(GetOperator(infix.at(i))) ||
 					(precedence == GetPrecedence(GetOperator(infix.at(i))) && GetAssoc(GetOperator(infix.at(i))) == Associativity::Left)) {
 					output.push_back(Token{ operatorStack.top() });
 					operatorStack.pop();
+					precedence = operatorStack.empty() ? -1 : GetPrecedence(operatorStack.top());
 				}
 				operatorStack.push(GetOperator(infix.at(i)));
 			}
@@ -140,15 +155,14 @@ public:
 		return output;
 	}
 	template <class T> static inline T Calculate(std::vector<Token> tokens) {
-		highestDegree = 1;
 		std::stack<Token> stack;
 		for (int i = 0; i < tokens.size(); i++) {
 			if (!tokens.at(i).value.empty()) {
 				stack.push(tokens.at(i));
 			}
 			else if (isOperator(tokens.at(i).type)) {
-				T value1 = static_cast<T>(atof(GetOperand(stack).value.c_str()));
-				T value2 = static_cast<T>(atof(GetOperand(stack).value.c_str()));
+				double value1 = std::stod(GetOperand(stack).value.c_str());
+				double value2 = std::stod(GetOperand(stack).value.c_str());
 				std::string value;
 				switch (tokens.at(i).type) {
 				case Type::Asterisk: {value = std::to_string(value1 * value2); } break;
@@ -157,42 +171,41 @@ public:
 				case Type::Plus: {value = std::to_string(value1 + value2); } break;
 				case Type::Power: {value = std::to_string(pow(value2, value1)); } break;
 				}
-				highestDegree = fmax(highestDegree, atof(value.c_str()));
 				stack.push(Token{ Type::Number, value });
 			}
 			else if (isFunction(tokens.at(i).type)) {
-				T value1 = static_cast<T>(atof(GetOperand(stack).value.c_str()));
+				double value1 = std::stod(GetOperand(stack).value.c_str());
 				std::string value;
 				switch (tokens.at(i).type) {
 				case Type::Sin: {value = std::to_string(std::sin(value1)); }; break;
 				case Type::Cos: {value = std::to_string(std::cos(value1)); } break;
 				case Type::Tan: {value = std::to_string(std::tan(value1)); } break;
-				case Type::Max: {value = std::to_string(fmax(value1, static_cast<T>(atof(GetOperand(stack).value.c_str())))); } break;
-				case Type::Min: {value = std::to_string(fmin(value1, static_cast<T>(atof(GetOperand(stack).value.c_str())))); } break;
+				case Type::Max: {value = std::to_string(fmax(value1, std::stod(GetOperand(stack).value.c_str()))); } break;
+				case Type::Min: {value = std::to_string(fmin(value1, std::stod(GetOperand(stack).value.c_str()))); } break;
 				case Type::Cot: {value = std::to_string(1.f / std::tan(value1)); } break;
 				case Type::Sec: {value = std::to_string(1.f / std::cos(value1)); } break;
 				case Type::Csc: {value = std::to_string(1.f / std::sin(value1)); } break;
-				case Type::Ln: {value = std::to_string(std::logf(value1)); } break;
+				case Type::Ln: {value = std::to_string(std::log(value1)); } break;
 				case Type::Abs: {value = std::to_string(std::abs(value1)); } break;
-				case Type::Sqrt: {value = std::to_string(std::sqrtf(value1)); } break;
-				case Type::Root: {value = std::to_string(std::pow(static_cast<T>(atof(GetOperand(stack).value.c_str())), 1.f/value1)); } break;
+				case Type::Sqrt: {value = std::to_string(std::sqrt(value1)); } break;
+				case Type::Root: {value = std::to_string(std::pow(std::stod(GetOperand(stack).value.c_str()), 1.f / value1)); } break;
 				case Type::Sign: {value = std::to_string((value1 >= 0) ? 1.f : -1.f); } break;
-				case Type::Log: {value = std::to_string(std::log10f(value1)); } break;
+				case Type::Log: {value = std::to_string(std::log10(value1)); } break;
+				case Type::Neg: {value = std::to_string(-1 * value1); } break;
 				case Type::FnInt: {
-					T value2 = static_cast<T>(atof(GetOperand(stack).value.c_str()));
+					double value2 = std::stod(GetOperand(stack).value.c_str());
 					std::string expr = GetOperand(stack).value;
-					value = std::to_string(Integrate(expr, value2, value1)); 
+					value = std::to_string(Integrate(expr, value2, value1));
 				} break;
 				case Type::Deriv: {
 					std::string expr = GetOperand(stack).value;
 					value = std::to_string(Derivate(expr, value1));
 				} break;
 				}
-				highestDegree = fmax(highestDegree, atof(value.c_str()));
 				stack.push(Token{ Type::Number, value });
 			}
 		}
-		return static_cast<T>(atof(stack.top().value.c_str()));
+		return static_cast<T>(std::stod(stack.top().value.c_str()));
 	}
 	static inline double GetValue(std::string infix, double variable = 0) {
 		return Calculate<double>(Convert(variable, infix));
@@ -236,15 +249,30 @@ public:
 		return std::find(operators.begin(), operators.end(), input) != operators.end();
 	}
 	static inline bool isFunction(const Type& input) {
-		std::vector<Type> operators = { Type::Log, Type::FnInt, Type::Deriv, Type::Sin, Type::Cos, Type::Tan, Type::Cot, Type::Sec, Type::Csc, Type::Max, Type::Min, Type::Ln, Type::Sqrt, Type::Root, Type::Abs, Type::Sign};
+		std::vector<Type> operators = { Type::Neg, Type::Log, Type::FnInt, Type::Deriv, Type::Sin, Type::Cos, Type::Tan, Type::Cot, Type::Sec, Type::Csc, Type::Max, Type::Min, Type::Ln, Type::Sqrt, Type::Root, Type::Abs, Type::Sign };
 		return std::find(operators.begin(), operators.end(), input) != operators.end();
 	}
 	static inline std::string GetFunction(const std::string& infix, const int& index) {
-		std::vector<std::string> functions = { "log", "fnint", "deriv", "sin", "cos", "tan", "cot", "sec", "csc", "min", "max", "ln", "sqrt", "root", "abs", "sign"};
+		std::vector<std::string> functions = { "neg", "log", "fnint", "deriv", "sin", "cos", "tan", "cot", "sec", "csc", "min", "max", "ln", "sqrt", "root", "abs", "sign" };
 		for (int i = 0; i < functions.size(); i++)
 			if (infix.substr(index, functions.at(i).size()) == functions.at(i))
 				return functions.at(i);
 		return "";
+	}
+	static inline std::string GetConstant(const std::string& infix, const int& index) {
+		std::vector<std::string> functions = { "e", "pi", "g", "EPSILON", "x" };
+		for (int i = 0; i < functions.size(); i++)
+			if (infix.substr(index, functions.at(i).size()) == functions.at(i))
+				return functions.at(i);
+		return "";
+	}
+	static inline double GetConstantValue(std::string& constant, double variable) {
+		if (constant == "pi") return 3.141592653589793;
+		else if (constant == "EPSILON") return 0.000001;
+		else if (constant == "e") return 2.71828;
+		else if (constant == "g") return 9.81;
+		else if (constant == "x") return variable;
+		else return 0.0;
 	}
 	static inline Type GetFunctionToken(const std::string& function) {
 		Type type = Type::Undefined;
@@ -264,23 +292,18 @@ public:
 		else if (function == "fnint") type = Type::FnInt;
 		else if (function == "deriv") type = Type::Deriv;
 		else if (function == "log") type = Type::Log;
+		else if (function == "neg") type = Type::Neg;
 		return type;
 	}
 	static inline double Integrate(std::string input, double a, double b) {
-		highestDegree = 1;
-		double sum = (GetValue(input, a) + GetValue(input, b));
-		double h = (b - a) / highestDegree;
-		for (int i = 1; i < highestDegree; i++)
-		{
-			double x = a + i * h;
-			sum += 2 * GetValue(input, x);
-		}
-		return sum * (h / 2);
+		double h = (b - a) / 3;
+		double area = 0.0;
+		area = ((3 * h) / 8) * (GetValue(input, a) + 3 * GetValue(input, (2 * a + b) / 3) + 3 * GetValue(input, (a + 2 * b) / 3) + GetValue(input, b));
+		return area;
 	}
 	static inline double Derivate(std::string input, double x, double h = 10.0) {
-		return (GetValue(input, x+h) - GetValue(input, x-h)) / (2 * h);
+		return (GetValue(input, x + h) - GetValue(input, x - h)) / (2 * h);
 	}
 private:
 	static std::stack<Type> operatorStack;
-	static int highestDegree;
 };
