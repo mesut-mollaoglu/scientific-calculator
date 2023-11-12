@@ -260,19 +260,25 @@ public:
 		return "";
 	}
 	static inline std::string GetConstant(const std::string& infix, const int& index) {
-		std::vector<std::string> functions = { "e", "pi", "g", "EPSILON", "x" };
-		for (int i = 0; i < functions.size(); i++)
-			if (infix.substr(index, functions.at(i).size()) == functions.at(i))
-				return functions.at(i);
+		std::vector<std::string> constants = { "e", "pi", "g", "EPSILON", "x" };
+		for (int i = 0; i < constants.size(); i++)
+			if (infix.substr(index, constants.at(i).size()) == constants.at(i))
+				return constants.at(i);
 		return "";
 	}
 	static inline double GetConstantValue(std::string& constant, double variable) {
-		if (constant == "pi") return 3.141592653589793;
-		else if (constant == "EPSILON") return 0.000001;
-		else if (constant == "e") return 2.71828;
-		else if (constant == "g") return 9.81;
-		else if (constant == "x") return variable;
-		else return 0.0;
+		typedef struct value { std::string name; double val; } value;
+		std::vector<value> values = {
+			value{"pi", 3.141592653589793},
+			value{"x", variable},
+			value{"EPSILON", 0.000001},
+			value{"g", 9.81},
+			value{"e", 2.718281828459045},
+		};
+		for (auto& element : values) 
+			if (strcmp(constant.c_str(), element.name.c_str()) == 0)
+				return element.val;
+		return 0.0;
 	}
 	static inline Type GetFunctionToken(const std::string& function) {
 		Type type = Type::Undefined;
