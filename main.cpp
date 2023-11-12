@@ -1,3 +1,4 @@
+#pragma comment(lib, "comctl32")
 #include "TextBox.h"
 #include "Button.h"
 #include <chrono>
@@ -46,14 +47,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, false, WS_EX_OVERLAPPEDWINDOW);
 	windowHandle = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, WC_DIALOG, L"Calculator", WS_OVERLAPPEDWINDOW, 100, 100, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, hInstance, nullptr);
 	Graphics::InitGraphics(windowHandle);
-	TextBox input = TextBox(windowHandle, 370.0f, 25.0f, 225.0f, 12.0, L"Input:");
-	TextBox value = TextBox(windowHandle, 370.0f, 40.0f, 225.0f, 12.0, L"Variable Value:");
-	TextBox from = TextBox(windowHandle, 370.0f, 55.0f, 225.0f, 12.0f, L"From:");
-	TextBox to = TextBox(windowHandle, 370.0f, 70.0f, 225.0f, 12.0f, L"To:");
-	Button calculate = Button(windowHandle, 5.0f, 50.0f, 60.0f, 20.0f, L"Calculate");
-	Button graph = Button(windowHandle, 5.0f, 70.0f, 60.0f, 20.0f, L"Graph");
-	Button integrate = Button(windowHandle, 5.0f, 10.0f, 60.0f, 20.0f, L"Integrate");
-	Button derivate = Button(windowHandle, 5.0f, 30.0f, 60.0f, 20.0f, L"Derivative");
+	TextBox value = TextBox(windowHandle, 5.f, 10.f, L"Variable Value:");
+	TextBox input = TextBox(windowHandle, 5.f, 40.f, L"Input:");
+	Button calculate = Button(windowHandle, 5.f, 70.f, 60.f, 20.f, L"Calculate");
+	Button graph = Button(windowHandle, 5.f, 100.f, 40.f, 20.f, L"Graph");
 	windowProc = (WNDPROC)SetWindowLongPtrW(windowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc));
 	ShowWindow(windowHandle, nCmdShow);
 	MSG message = { 0 };
@@ -63,8 +60,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		if (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
 			input.UpdateText(message);
 			value.UpdateText(message);
-			from.UpdateText(message);
-			to.UpdateText(message);
 			TranslateMessage(&message);
 			DispatchMessage(&message);
 		}
@@ -73,24 +68,23 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 			Graphics::GetRenderTarget()->Clear(D2D1::ColorF(D2D1::ColorF::White));
 			input.Render();
 			value.Render();
-			from.Render();
-			to.Render();
 			calculate.Render();
-			integrate.Render();
-			derivate.Render();
 			graph.Render();
 			Graphics::DrawGrid(0, 600, 0, 600, 15);
 			if (drawGraph) Graphics::CreateGraph(s, -600, 600, 0, 600);
-			Graphics::DrawTextF(L"Result = " + std::to_wstring(result), 500, 585, 110, 10, Graphics::blackColor);
+			Graphics::DrawTextF(L"Result = " + std::to_wstring(result), 0, 585, 600, 10, Graphics::blackColor);
 			Graphics::GetRenderTarget()->EndDraw();
 			if (std::abs(std::chrono::duration<float>(now - Clock::now()).count()) > 0.15)
 			{
 				if (!input.empty() && !value.empty() && calculate.clicked()) result = Calculator::GetValue(input.GetText(), atof(value.GetText().c_str()));
-				if (!to.empty() && !from.empty() && !input.empty() && integrate.clicked()) result = Calculator::Integrate(input.GetText(), atof(from.GetText().c_str()), atof(to.GetText().c_str()));
-				if (!input.empty() && !value.empty() && derivate.clicked()) result = Calculator::Derivate(input.GetText(), atof(value.GetText().c_str()), 10);
 				if (!input.empty() && graph.clicked()) { s = input.GetText(); drawGraph = true; }
 				now = Clock::now();
 			}
 		}
 	}
+	return message.wParam;
+}
+
+int main() {
+	return 0;
 }

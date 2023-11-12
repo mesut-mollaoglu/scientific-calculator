@@ -24,7 +24,17 @@ public:
 		Sec,
 		Csc,
 		Min,
-		Max
+		Max,
+		Ln,
+		Sqrt,
+		Root,
+		Abs,
+		Sign,
+		FnInt,
+		Deriv,
+		Expr,
+		Log,
+		Undefined
 	};
 	struct Token {
 		Type type;
@@ -67,7 +77,20 @@ public:
 				std::string function = GetFunction(infix, i);
 				Type functionType = GetFunctionToken(function);
 				operatorStack.push(functionType);
-				i += function.size() - 1;
+				bool bExpression = (functionType == Type::FnInt || functionType == Type::Deriv);
+				i += function.size() - (bExpression ? 0 : 1);
+				if (bExpression) {
+					std::string expr;
+					if (infix.at(i) == '(') {
+						operatorStack.push(Type::Open);
+						i++;
+					}
+					while (infix.at(i) != ',') {
+						expr.push_back(infix.at(i));
+						i++;
+					}
+					output.push_back(Token{ Type::Expr, expr });
+				}
 			}
 			else if (isOperator(infix.at(i))) {
 				if (!buffer.empty()) {
@@ -117,9 +140,10 @@ public:
 		return output;
 	}
 	template <class T> static inline T Calculate(std::vector<Token> tokens) {
+		highestDegree = 1;
 		std::stack<Token> stack;
 		for (int i = 0; i < tokens.size(); i++) {
-			if (tokens.at(i).type == Type::Number) {
+			if (!tokens.at(i).value.empty()) {
 				stack.push(tokens.at(i));
 			}
 			else if (isOperator(tokens.at(i).type)) {
@@ -134,7 +158,7 @@ public:
 				case Type::Power: {value = std::to_string(pow(value2, value1)); } break;
 				}
 				highestDegree = fmax(highestDegree, atof(value.c_str()));
-				stack.push(Token{ .type = Type::Number, .value = value });
+				stack.push(Token{ Type::Number, value });
 			}
 			else if (isFunction(tokens.at(i).type)) {
 				T value1 = static_cast<T>(atof(GetOperand(stack).value.c_str()));
@@ -143,14 +167,29 @@ public:
 				case Type::Sin: {value = std::to_string(std::sin(value1)); }; break;
 				case Type::Cos: {value = std::to_string(std::cos(value1)); } break;
 				case Type::Tan: {value = std::to_string(std::tan(value1)); } break;
-				case Type::Max: {value = std::to_string(fmax(value1, atof(GetOperand(stack).value.c_str()))); } break;
-				case Type::Min: {value = std::to_string(fmin(value1, atof(GetOperand(stack).value.c_str()))); } break;
+				case Type::Max: {value = std::to_string(fmax(value1, static_cast<T>(atof(GetOperand(stack).value.c_str())))); } break;
+				case Type::Min: {value = std::to_string(fmin(value1, static_cast<T>(atof(GetOperand(stack).value.c_str())))); } break;
 				case Type::Cot: {value = std::to_string(1.f / std::tan(value1)); } break;
 				case Type::Sec: {value = std::to_string(1.f / std::cos(value1)); } break;
 				case Type::Csc: {value = std::to_string(1.f / std::sin(value1)); } break;
+				case Type::Ln: {value = std::to_string(std::logf(value1)); } break;
+				case Type::Abs: {value = std::to_string(std::abs(value1)); } break;
+				case Type::Sqrt: {value = std::to_string(std::sqrtf(value1)); } break;
+				case Type::Root: {value = std::to_string(std::pow(static_cast<T>(atof(GetOperand(stack).value.c_str())), 1.f/value1)); } break;
+				case Type::Sign: {value = std::to_string((value1 >= 0) ? 1.f : -1.f); } break;
+				case Type::Log: {value = std::to_string(std::log10f(value1)); } break;
+				case Type::FnInt: {
+					T value2 = static_cast<T>(atof(GetOperand(stack).value.c_str()));
+					std::string expr = GetOperand(stack).value;
+					value = std::to_string(Integrate(expr, value2, value1)); 
+				} break;
+				case Type::Deriv: {
+					std::string expr = GetOperand(stack).value;
+					value = std::to_string(Derivate(expr, value1));
+				} break;
 				}
 				highestDegree = fmax(highestDegree, atof(value.c_str()));
-				stack.push(Token{ .type = Type::Number, .value = value });
+				stack.push(Token{ Type::Number, value });
 			}
 		}
 		return static_cast<T>(atof(stack.top().value.c_str()));
@@ -178,7 +217,7 @@ public:
 		case '*': {return Type::Asterisk; } break;
 		case '/': {return Type::Slash; } break;
 		case '^': {return Type::Power; } break;
-		default: {return Type::Number; } break;
+		default: {return Type::Undefined; } break;
 		}
 	}
 	static inline Associativity GetAssoc(const Type& input) {
@@ -197,18 +236,18 @@ public:
 		return std::find(operators.begin(), operators.end(), input) != operators.end();
 	}
 	static inline bool isFunction(const Type& input) {
-		std::vector<Type> operators = { Type::Sin, Type::Cos, Type::Tan, Type::Cot, Type::Sec, Type::Csc, Type::Max, Type::Min };
+		std::vector<Type> operators = { Type::Log, Type::FnInt, Type::Deriv, Type::Sin, Type::Cos, Type::Tan, Type::Cot, Type::Sec, Type::Csc, Type::Max, Type::Min, Type::Ln, Type::Sqrt, Type::Root, Type::Abs, Type::Sign};
 		return std::find(operators.begin(), operators.end(), input) != operators.end();
 	}
 	static inline std::string GetFunction(const std::string& infix, const int& index) {
-		std::vector<std::string> functions = { "sin", "cos", "tan", "cot", "sec", "csc", "min", "max" };
+		std::vector<std::string> functions = { "log", "fnint", "deriv", "sin", "cos", "tan", "cot", "sec", "csc", "min", "max", "ln", "sqrt", "root", "abs", "sign"};
 		for (int i = 0; i < functions.size(); i++)
 			if (infix.substr(index, functions.at(i).size()) == functions.at(i))
 				return functions.at(i);
 		return "";
 	}
 	static inline Type GetFunctionToken(const std::string& function) {
-		Type type;
+		Type type = Type::Undefined;
 		if (function == "sin") type = Type::Sin;
 		else if (function == "cos") type = Type::Cos;
 		else if (function == "tan") type = Type::Tan;
@@ -217,6 +256,14 @@ public:
 		else if (function == "cot") type = Type::Cot;
 		else if (function == "sec") type = Type::Sec;
 		else if (function == "csc") type = Type::Csc;
+		else if (function == "ln") type = Type::Ln;
+		else if (function == "abs") type = Type::Abs;
+		else if (function == "sqrt") type = Type::Sqrt;
+		else if (function == "root") type = Type::Root;
+		else if (function == "sign") type = Type::Sign;
+		else if (function == "fnint") type = Type::FnInt;
+		else if (function == "deriv") type = Type::Deriv;
+		else if (function == "log") type = Type::Log;
 		return type;
 	}
 	static inline double Integrate(std::string input, double a, double b) {
@@ -230,7 +277,7 @@ public:
 		}
 		return sum * (h / 2);
 	}
-	static inline double Derivate(std::string input, double x, double h) {
+	static inline double Derivate(std::string input, double x, double h = 10.0) {
 		return (GetValue(input, x+h) - GetValue(input, x-h)) / (2 * h);
 	}
 private:

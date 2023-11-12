@@ -56,9 +56,8 @@ public:
 		{
 			y = Calculator::GetValue(infix, x);
 			D2D1_POINT_2F point1 = D2D1::Point2F((x - xmin) / (xmax - xmin) * (float)600, (1 - (y - ymin) / (ymax - ymin)) * (float)600);
-			D2D1_POINT_2F point2 = D2D1::Point2F((x + 1 - xmin) / (xmax - xmin) * (float)600,
-				(1 - Calculator::GetValue(infix, x+1) - ymin) / (ymax - ymin) * (float)600);
-			renderTarget->DrawLine(point1, point2, blackColor, 1.0f);
+			D2D1_POINT_2F point2 = D2D1::Point2F((x + 1 - xmin) / (xmax - xmin) * (float)600, (1 - Calculator::GetValue(infix, x+1) - ymin) / (ymax - ymin) * (float)600);
+			renderTarget->DrawLine(point1, point2, blackColor, 1.f);
 		}
 	}
 	static ID2D1SolidColorBrush* blackColor;
@@ -84,6 +83,17 @@ public:
 		{
 			renderTarget->DrawLine(D2D1::Point2F(x, ymin), D2D1::Point2F(x, ymax), snowColor, 0.5f);
 		}
+	}
+	static inline void Free() {
+		if (factory)factory->Release();
+		if(dWriteFactory)dWriteFactory->Release();
+		if (textFormat)textFormat->Release();
+		if(textLayout)textLayout->Release();
+		if(renderTarget)renderTarget->Release();
+		if (blackColor) blackColor->Release();
+		if (whiteColor) whiteColor->Release();
+		if (snowColor) snowColor->Release();
+
 	}
 private:
 	static ID2D1Factory1* factory;

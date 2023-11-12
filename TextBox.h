@@ -1,15 +1,24 @@
 #pragma once
 #include "Graphics.h"
 
+constexpr float charWidth = 5.f;
+constexpr float charHeight = 20.f;
+
 class TextBox {
 public:
-	TextBox(HWND windowHandle, float xPosition, float yPosition, float boxWidth, float boxHeight, std::wstring str)
-	: hwnd(windowHandle), x(xPosition), y(yPosition), width(boxWidth), height(boxHeight), text(str) {
-		rect = D2D1::RectF(x, y, x + width, y + height);
+	TextBox(HWND windowHandle, float xPosition, float yPosition, std::wstring str)
+	: hwnd(windowHandle), x(xPosition), y(yPosition), text(str) {
+		SetSize();
 	}
 	virtual ~TextBox(){}
+	void SetSize() {
+		rect.left = x;
+		rect.top = y;
+		rect.right = x + float(GetMaxLine() + 1) * charWidth;
+		rect.bottom = y + float(GetLineCount() + 1) * charHeight;
+	}
 	void CheckActivation() {
-		RECT rc = { x, y, x + width, y + height };
+		RECT rc = { rect.left, rect.top, rect.right, rect.bottom };
 		POINT pt;
 		GetCursorPos(&pt);
 		ScreenToClient(hwnd, &pt);
@@ -20,6 +29,22 @@ public:
 		Graphics::GetRenderTarget()->FillRectangle(rect, Graphics::whiteColor);
 		Graphics::DrawTextF(text, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, Graphics::blackColor);
 	}
+	int GetMaxLine() {
+		int maxCount = 0, buffer = 0;
+		for (auto &c : text) {
+			if (c == L'\n') { maxCount = fmax(maxCount, buffer); buffer = 0; }
+			else ++buffer;
+		}
+		maxCount = fmax(maxCount, buffer);
+		return maxCount;
+	}
+	int GetLineCount() {
+		int count = 0;
+		for (wchar_t &c : text)
+			if (c == L'\n')
+				count++;
+		return count;
+	}
 	void UpdateText(MSG message) {
 		CheckActivation();
 		if (!activated) return;
@@ -27,10 +52,12 @@ public:
 		case WM_CHAR: {
 			switch (message.wParam) {
 			case 0x08: {if (!text.empty()) text.pop_back(); } break;
+			case 0x0D: {text += L'\n'; } break;
 			default: {text += (wchar_t)message.wParam; } break;
 			}
 		}
 		}
+		SetSize();
 	}
 	std::string GetText() {
 		return std::string(text.begin(), text.end());
