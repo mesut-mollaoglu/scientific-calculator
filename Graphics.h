@@ -7,7 +7,7 @@
 #include <iostream>
 #include "Calculator.h"
 
-std::stack<Calculator::Type> Calculator::operatorStack;
+std::stack<Type> Calculator::operatorStack;
 
 class Graphics {
 public:

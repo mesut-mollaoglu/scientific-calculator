@@ -1,7 +1,7 @@
 #pragma once
 #include "Graphics.h"
 
-constexpr float charWidth = 5.f;
+constexpr float charWidth = 5.5f;
 constexpr float charHeight = 20.f;
 
 class TextBox {
