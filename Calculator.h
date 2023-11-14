@@ -35,6 +35,7 @@ enum class Type {
 	Deriv,
 	Expr,
 	Log,
+	Log10,
 	Neg,
 	Atan,
 	Asin,
@@ -60,6 +61,7 @@ struct Constant {
 struct Function {
 	std::string name;
 	Type type;
+	bool bExpression = false;
 };
 
 struct Operator {
@@ -70,26 +72,27 @@ struct Operator {
 };
 
 const std::vector<Function> functions = {
-		{"sin", Type::Sin},
-		{"cos", Type::Cos},
-		{"tan", Type::Tan},
-		{"max", Type::Max},
-		{"min", Type::Min},
-		{"cot", Type::Cot},
-		{"sec", Type::Sec},
-		{"csc", Type::Csc},
-		{"ln", Type::Ln},
-		{"abs", Type::Abs},
-		{"sqrt", Type::Sqrt},
-		{"root", Type::Root},
-		{"sign", Type::Sign},
-		{"fnint", Type::FnInt},
-		{"deriv", Type::Deriv},
-		{"log", Type::Log},
-		{"neg", Type::Neg},
-		{"atan" ,Type::Atan},
-		{"acos" ,Type::Acos},
-		{"asin" ,Type::Asin}
+	{"sin", Type::Sin},
+	{"cos", Type::Cos},
+	{"tan", Type::Tan},
+	{"max", Type::Max},
+	{"min", Type::Min},
+	{"cot", Type::Cot},
+	{"sec", Type::Sec},
+	{"csc", Type::Csc},
+	{"ln", Type::Ln},
+	{"abs", Type::Abs},
+	{"sqrt", Type::Sqrt},
+	{"root", Type::Root},
+	{"sign", Type::Sign},
+	{"fnint", Type::FnInt, true},
+	{"deriv", Type::Deriv, true},
+	{"log", Type::Log},
+	{"log10", Type::Log10},
+	{"neg", Type::Neg},
+	{"atan" ,Type::Atan},
+	{"acos" ,Type::Acos},
+	{"asin" ,Type::Asin}
 };
 
 const std::vector<Constant> constants = {
@@ -156,9 +159,8 @@ public:
 					buffer.clear();
 				}
 				operatorStack.push(function.type);
-				bool bExpression = (function.type == Type::FnInt || function.type == Type::Deriv);
-				i += function.name.size() - (bExpression ? 0 : 1);
-				if (bExpression) {
+				i += function.name.size() - (function.bExpression ? 0 : 1);
+				if (function.bExpression) {
 					std::string expr;
 					if (infix.at(i) == '(') {
 						operatorStack.push(Type::Open);
@@ -235,24 +237,25 @@ public:
 				double value1 = std::stod(GetOperand(stack).value.c_str());
 				std::string value;
 				switch (tokens.at(i).type) {
-				case Type::Sin: {value = std::to_string(std::sin(value1)); }; break;
+				case Type::Neg: {value = std::to_string(-1 * value1); } break;
+				case Type::Ln: {value = std::to_string(std::log(value1)); } break;
 				case Type::Cos: {value = std::to_string(std::cos(value1)); } break;
 				case Type::Tan: {value = std::to_string(std::tan(value1)); } break;
-				case Type::Max: {value = std::to_string(fmax(value1, std::stod(GetOperand(stack).value.c_str()))); } break;
-				case Type::Min: {value = std::to_string(fmin(value1, std::stod(GetOperand(stack).value.c_str()))); } break;
+				case Type::Abs: {value = std::to_string(std::abs(value1)); } break;
+				case Type::Sin: {value = std::to_string(std::sin(value1)); }; break;
+				case Type::Acos: {value = std::to_string(std::acos(value1)); } break;
+				case Type::Atan: {value = std::to_string(std::atan(value1)); } break;
+				case Type::Sqrt: {value = std::to_string(std::sqrt(value1)); } break;
+				case Type::Asin: {value = std::to_string(std::asin(value1)); }; break;
+				case Type::Log10: {value = std::to_string(std::log10(value1)); } break;
 				case Type::Cot: {value = std::to_string(1.0 / std::tan(value1)); } break;
 				case Type::Sec: {value = std::to_string(1.0 / std::cos(value1)); } break;
 				case Type::Csc: {value = std::to_string(1.0 / std::sin(value1)); } break;
-				case Type::Ln: {value = std::to_string(Calculator::log(std::stod(GetOperand(stack).value.c_str()), value1)); } break;
-				case Type::Abs: {value = std::to_string(std::abs(value1)); } break;
-				case Type::Sqrt: {value = std::to_string(std::sqrt(value1)); } break;
+				case Type::Sign: {value = std::to_string((value1 >= 0) ? 1.0 : -1.0); } break;
+				case Type::Max: {value = std::to_string(fmax(value1, std::stod(GetOperand(stack).value.c_str()))); } break;
+				case Type::Min: {value = std::to_string(fmin(value1, std::stod(GetOperand(stack).value.c_str()))); } break;
+				case Type::Log: {value = std::to_string(Calculator::log(std::stod(GetOperand(stack).value.c_str()), value1)); } break;
 				case Type::Root: {value = std::to_string(std::pow(std::stod(GetOperand(stack).value.c_str()), 1.0 / value1)); } break;
-				case Type::Sign: {value = std::to_string((value1 >= 0) ? 1.f : -1.f); } break;
-				case Type::Log: {value = std::to_string(std::log10(value1)); } break;
-				case Type::Neg: {value = std::to_string(-1 * value1); } break;
-				case Type::Asin: {value = std::to_string(std::asin(value1)); }; break;
-				case Type::Acos: {value = std::to_string(std::acos(value1)); } break;
-				case Type::Atan: {value = std::to_string(std::atan(value1)); } break;
 				case Type::FnInt: {
 					double value2 = std::stod(GetOperand(stack).value.c_str());
 					std::string expr = GetOperand(stack).value;
@@ -315,21 +318,9 @@ public:
 	static inline double Derivative(std::string input, double x, double h = 10.0) {
 		return (GetValue(input, x + h) - GetValue(input, x - h)) / (2 * h);
 	}
-	static inline uint16_t log2(uint32_t n) {
-		if (n == 0)
-		{
-			throw new std::exception(std::out_of_range(""));
-		}
-		uint16_t val = -1;
-		while (n) {
-			val++;
-			n >>= 1;
-		}
-		return val;
-	}
-	static inline uint32_t log(uint32_t a, uint32_t b)
+	static inline double log(double a, double b)
 	{
-		return log2(a) / log2(b);
+		return std::log2(b) / std::log2(a);
 	}
 private:
 	static std::stack<Type> operatorStack;
