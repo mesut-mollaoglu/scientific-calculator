@@ -131,9 +131,7 @@ public:
 		};
 		auto add_operator = [&](Operator oper) {
 			int precedence = get_precedence();
-			bool bOpen = operatorStack.empty() ? false : operatorStack.top() != Type::Open;
-			while (bOpen && (precedence > oper.precedence ||
-				(precedence == oper.precedence && oper.assoc == Associativity::Left))) {
+			while ((precedence > oper.precedence || (precedence == oper.precedence && oper.assoc == Associativity::Left))) {
 				output.push_back(Token{ operatorStack.top() });
 				operatorStack.pop();
 				precedence = get_precedence();
