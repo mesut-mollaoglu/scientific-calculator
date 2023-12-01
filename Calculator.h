@@ -115,25 +115,38 @@ public:
 	static inline std::vector<Token> Convert(double variable, std::string infix) {
 		std::vector<Token> output;
 		std::string buffer;
+		auto clear_buffer = [&]() {
+			if (!buffer.empty()) {
+				output.push_back(Token{ Type::Number, buffer });
+				buffer.clear();
+			}
+		};
+		auto get_precedence = [&]() {
+			int precedence = -1;
+			if (!operatorStack.empty()) {
+				Operator oper = GetOperator(operatorStack.top());
+				if (oper.oper != '\0') precedence = oper.precedence;
+			}
+			return precedence;
+		};
 		auto add_operator = [&](Operator oper) {
-			int precedence = operatorStack.empty() ? -1 : GetOperator(operatorStack.top()).precedence;
-			while (precedence > oper.precedence || (precedence == oper.precedence && oper.assoc == Associativity::Left)) {
+			int precedence = get_precedence();
+			bool bOpen = operatorStack.empty() ? false : operatorStack.top() != Type::Open;
+			while (bOpen && (precedence > oper.precedence ||
+				(precedence == oper.precedence && oper.assoc == Associativity::Left))) {
 				output.push_back(Token{ operatorStack.top() });
 				operatorStack.pop();
-				precedence = operatorStack.empty() ? -1 : GetOperator(operatorStack.top()).precedence;
+				precedence = get_precedence();
 			}
 			operatorStack.push(oper.type);
 		};
 		for (int i = 0; i < infix.size(); i++) {
-			if (isdigit(infix.at(i)) || infix.at(i) == '.') {
-				buffer.push_back(infix.at(i));
-			}
-			else if (!GetConstant(infix, i).name.empty() || infix.at(i) == 'x') {
-				Constant constant = (infix.at(i) == 'x') ? Constant{"x", variable} : GetConstant(infix, i);
+			if (!GetConstant(infix, i).name.empty() || infix.at(i) == 'x') {
+				Constant constant = (infix.at(i) == 'x') ? Constant{ "x", variable } : GetConstant(infix, i);
 				if (!buffer.empty()) {
 					output.push_back(Token{ Type::Number, buffer });
 					buffer.clear();
-					add_operator({ Type::Asterisk, 2, '*', Associativity::Left});
+					add_operator({ Type::Asterisk, 2, '*', Associativity::Left });
 					output.push_back(Token{ Type::Number, std::to_string(constant.value) });
 				}
 				else {
@@ -142,10 +155,7 @@ public:
 				i += constant.name.size() - 1;
 			}
 			else if (infix.at(i) == ',') {
-				if (!buffer.empty()) {
-					output.push_back(Token{ Type::Number, buffer });
-					buffer.clear();
-				}
+				clear_buffer();
 				while (operatorStack.top() != Type::Open) {
 					output.push_back(Token{ operatorStack.top() });
 					operatorStack.pop();
@@ -154,10 +164,7 @@ public:
 			}
 			else if (!GetFunction(infix, i).name.empty()) {
 				Function function = GetFunction(infix, i);
-				if (!buffer.empty()) {
-					output.push_back(Token{ Type::Number, buffer });
-					buffer.clear();
-				}
+				clear_buffer();
 				operatorStack.push(function.type);
 				i += function.name.size() - (function.bExpression ? 0 : 1);
 				if (function.bExpression) {
@@ -174,40 +181,30 @@ public:
 				}
 			}
 			else if (GetOperator(infix, i).oper != '\0') {
-				if (!buffer.empty()) {
-					output.push_back(Token{ Type::Number, buffer });
-					buffer.clear();
-				}
+				clear_buffer();
 				add_operator(GetOperator(infix, i));
 			}
 			else if (infix.at(i) == '(') {
-				if (!buffer.empty()) {
-					output.push_back(Token{ Type::Number, buffer });
-					buffer.clear();
-				}
+				clear_buffer();
 				operatorStack.push(Type::Open);
 			}
 			else if (infix.at(i) == ')') {
-				if (!buffer.empty()) {
-					output.push_back(Token{ Type::Number, buffer });
-					buffer.clear();
-				}
+				clear_buffer();
 				while (operatorStack.top() != Type::Open) {
 					output.push_back(Token{ operatorStack.top() });
 					operatorStack.pop();
 				}
-				if (operatorStack.top() == Type::Open)
-					operatorStack.pop();
-				if (isFunction(operatorStack.top())) {
+				operatorStack.pop();
+				if (!operatorStack.empty() && isFunction(operatorStack.top())) {
 					output.push_back(Token{ operatorStack.top() });
 					operatorStack.pop();
 				}
 			}
+			else if (isdigit(infix.at(i)) || infix.at(i) == '.') {
+				buffer.push_back(infix.at(i));
+			}
 		}
-		if (!buffer.empty()) {
-			output.push_back(Token{ Type::Number, buffer });
-			buffer.clear();
-		}
+		clear_buffer();
 		while (!operatorStack.empty()) {
 			output.push_back(Token{ operatorStack.top() });
 			operatorStack.pop();
@@ -298,7 +295,7 @@ public:
 		return {};
 	}
 	static inline Constant GetConstant(const std::string& infix, const int& index) {
-		for (auto &element : constants)
+		for (auto& element : constants)
 			if (infix.substr(index, element.name.size()) == element.name)
 				return element;
 		return {};
