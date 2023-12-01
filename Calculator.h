@@ -40,6 +40,9 @@ enum class Type {
 	Atan,
 	Asin,
 	Acos,
+	Sigma,
+	Lim,
+	Product,
 	Undefined
 };
 
@@ -87,19 +90,23 @@ const std::vector<Function> functions = {
 	{"sign", Type::Sign},
 	{"fnint", Type::FnInt, true},
 	{"deriv", Type::Deriv, true},
+	{"sigma", Type::Sigma, true},
+	{"lim", Type::Lim, true},
+	{"product", Type::Product, true},
 	{"log", Type::Log},
 	{"log10", Type::Log10},
 	{"neg", Type::Neg},
 	{"atan" ,Type::Atan},
 	{"acos" ,Type::Acos},
-	{"asin" ,Type::Asin}
+	{"asin" ,Type::Asin},
 };
 
 const std::vector<Constant> constants = {
 	{"pi", PI_VALUE},
 	{"epsilon", EPSILON},
 	{"g", 9.81},
-	{"e", E_VALUE}
+	{"e", E_VALUE},
+	{"inf", HUGE_VAL}
 };
 
 const std::vector<Operator> operators = {
@@ -260,6 +267,22 @@ public:
 					std::string expr = GetOperand(stack).value;
 					value = std::to_string(Derivative(expr, value1));
 				} break;
+				case Type::Sigma: {
+					double end = std::stod(GetOperand(stack).value.c_str());
+					double start = std::stod(GetOperand(stack).value.c_str());
+					std::string expr = GetOperand(stack).value;
+					value = std::to_string(Sigma(expr, start, end, value1));
+				}break;
+				case Type::Lim: {
+					std::string expr = GetOperand(stack).value;
+					value = std::to_string(Limit(expr, value1));
+				} break;
+				case Type::Product: {
+					double end = std::stod(GetOperand(stack).value.c_str());
+					double start = std::stod(GetOperand(stack).value.c_str());
+					std::string expr = GetOperand(stack).value;
+					value = std::to_string(Product(expr, start, end, value1));
+				}break;
 				}
 				stack.push(Token{ Type::Number, value });
 			}
@@ -303,6 +326,21 @@ public:
 			if (element.type == type)
 				return element;
 		return {};
+	}
+	static inline double Limit(std::string expr, double limit) {
+		return (GetValue(expr, limit + EPSILON) + GetValue(expr, limit - EPSILON)) / 2;
+	}
+	static inline double Product(std::string input, double start, double end, double inc = 1.0) {
+		double product = 1.0;
+		for (double i = start; i <= end; i += inc)
+			product *= GetValue(input, i);
+		return product;
+	}
+	static inline double Sigma(std::string input, double start, double end, double inc = 1.0) {
+		double sum = 0.0;
+		for (double i = start; i <= end; i += inc)
+			sum += GetValue(input, i);
+		return sum;
 	}
 	static inline double Integral(std::string input, double a, double b) {
 		double h = (b - a) / 3;
