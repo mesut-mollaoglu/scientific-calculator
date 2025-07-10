@@ -138,30 +138,30 @@ inline std::ostream& operator<<(std::ostream& os, const Token& token)
 
 const std::unordered_map<std::string_view, Token::Type> g_mapFunctionNames = 
 {
-	{"ln", Token::Type::Ln},
+    {"ln", Token::Type::Ln},
     {"sin", Token::Type::Sin},
-	{"cos", Token::Type::Cos},
-	{"tan", Token::Type::Tan},
-	{"max", Token::Type::Max},
-	{"min", Token::Type::Min},
-	{"cot", Token::Type::Cot},
-	{"sec", Token::Type::Sec},
-	{"csc", Token::Type::Csc},
-	{"abs", Token::Type::Abs},
-	{"lim", Token::Type::Lim},
-	{"log", Token::Type::Log},
-	{"neg", Token::Type::Neg},
-	{"sqrt", Token::Type::Sqrt},
-	{"root", Token::Type::Root},
-	{"sign", Token::Type::Sign},
-	{"asin", Token::Type::Asin},
-	{"atan", Token::Type::Atan},
-	{"acos", Token::Type::Acos},
-	{"log10", Token::Type::Log10},
+    {"cos", Token::Type::Cos},
+    {"tan", Token::Type::Tan},
+    {"max", Token::Type::Max},
+    {"min", Token::Type::Min},
+    {"cot", Token::Type::Cot},
+    {"sec", Token::Type::Sec},
+    {"csc", Token::Type::Csc},
+    {"abs", Token::Type::Abs},
+    {"lim", Token::Type::Lim},
+    {"log", Token::Type::Log},
+    {"neg", Token::Type::Neg},
+    {"sqrt", Token::Type::Sqrt},
+    {"root", Token::Type::Root},
+    {"sign", Token::Type::Sign},
+    {"asin", Token::Type::Asin},
+    {"atan", Token::Type::Atan},
+    {"acos", Token::Type::Acos},
+    {"log10", Token::Type::Log10},
     {"log2", Token::Type::Log2},
-	{"sigma", Token::Type::Sigma},
-	{"deriv", Token::Type::Deriv},
-	{"fnint", Token::Type::FnInt},
+    {"sigma", Token::Type::Sigma},
+    {"deriv", Token::Type::Deriv},
+    {"fnint", Token::Type::FnInt},
     {"prod", Token::Type::Product}
 };
 
@@ -199,10 +199,10 @@ const std::unordered_map<std::string_view, fp_t> g_mapConstantNames =
     {"tau", static_cast<fp_t>(6.28318530717958647692)},
     {"phi", static_cast<fp_t>(1.6180339887498948482)},
     {"pi", static_cast<fp_t>(3.141592653589793)},
-	{"e", static_cast<fp_t>(2.718281828459045)},
-	{"epsilon", static_cast<fp_t>(0.00001)},
+    {"e", static_cast<fp_t>(2.718281828459045)},
+    {"epsilon", static_cast<fp_t>(0.00001)},
     {"G", static_cast<fp_t>(6.6743E-11)},
-	{"g", static_cast<fp_t>(9.807)},
+    {"g", static_cast<fp_t>(9.807)},
     {"infinity", g_inf},
     {"inf", g_inf}
 };
@@ -219,11 +219,11 @@ struct Operator
 const std::unordered_map<Token::Type, Operator> g_mapOperators = 
 {
     {Token::Type::Plus, {1, '+', true}},
-	{Token::Type::Minus, {1, '-', true}},
-	{Token::Type::Asterisk, {2, '*', true}},
-	{Token::Type::Slash, {2, '/', true}},
+    {Token::Type::Minus, {1, '-', true}},
+    {Token::Type::Asterisk, {2, '*', true}},
+    {Token::Type::Slash, {2, '/', true}},
     {Token::Type::Modulo, {2, '%', false}},
-	{Token::Type::Power, {3, '^', false}}
+    {Token::Type::Power, {3, '^', false}}
 };
 
 const std::unordered_map<char, Token::Type> g_mapCharType = 
